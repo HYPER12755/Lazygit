@@ -1,0 +1,28 @@
+{
+  "theme": {
+    "name": "dark",
+    "colors": {
+      "header_fg": 0,
+      "header_bg": 6,
+      "footer_fg": 7,
+      "footer_bg": 0,
+      "selected_fg": 0,
+      "selected_bg": 3,
+      "normal_fg": 2,
+      "normal_bg": -1,
+      "success_fg": 2,
+      "success_bg": -1,
+      "error_fg": 1,
+      "error_bg": -1,
+      "warning_fg": 3,
+      "warning_bg": -1,
+      "info_fg": 6,
+      "info_bg": -1
+    }
+  },
+  "ui": {
+    "scroll_speed": 1,
+    "page_scroll_speed": 10,
+    "animation": false
+  }
+}
