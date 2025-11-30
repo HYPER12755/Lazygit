@@ -126,44 +126,76 @@ class InputDialog:
     
     def get_input(self) -> Optional[str]:
         max_y, max_x = self.stdscr.getmaxyx()
+        max_input_len = max_x - 8
         
-        curses.echo()
+        curses.noecho()
         curses.curs_set(1)
         
-        self.stdscr.clear()
-        self.stdscr.addstr(0, 0, " Input Required ".ljust(max_x), self.theme.get('header'))
+        user_input = list(self.default) if self.default else []
+        cursor_pos = len(user_input)
         
-        prompt_y = max_y // 2 - 2
-        self.stdscr.addstr(prompt_y, 2, self.prompt, self.theme.get('normal'))
-        
-        input_y = prompt_y + 2
-        self.stdscr.addstr(input_y, 2, "> ", self.theme.get('selected'))
-        
-        footer = "Enter: Submit | Esc: Cancel"
-        self.stdscr.addstr(max_y - 1, 0, footer[:max_x - 1], self.theme.get('footer'))
-        
-        self.stdscr.refresh()
-        
-        input_win = curses.newwin(1, max_x - 6, input_y, 4)
-        input_win.keypad(True)
-        
-        if self.default:
-            input_win.addstr(0, 0, self.default)
-        
-        try:
-            curses.curs_set(1)
-            user_input = input_win.getstr(0, 0, max_x - 8).decode('utf-8')
-            curses.noecho()
-            curses.curs_set(0)
-            return user_input if user_input else self.default
-        except KeyboardInterrupt:
-            curses.noecho()
-            curses.curs_set(0)
-            return None
-        except Exception:
-            curses.noecho()
-            curses.curs_set(0)
-            return None
+        while True:
+            self.stdscr.clear()
+            self.stdscr.addstr(0, 0, " Input Required ".ljust(max_x), self.theme.get('header'))
+            
+            prompt_y = max_y // 2 - 2
+            self.stdscr.addstr(prompt_y, 2, self.prompt, self.theme.get('normal'))
+            
+            input_y = prompt_y + 2
+            self.stdscr.addstr(input_y, 2, "> ", self.theme.get('selected'))
+            
+            display_text = ''.join(user_input)[:max_input_len]
+            self.stdscr.addstr(input_y, 4, display_text + " " * (max_input_len - len(display_text)))
+            
+            footer = "Enter: Submit | Esc: Cancel | Backspace: Delete"
+            self.stdscr.addstr(max_y - 1, 0, footer[:max_x - 1], self.theme.get('footer'))
+            
+            self.stdscr.move(input_y, 4 + min(cursor_pos, max_input_len - 1))
+            self.stdscr.refresh()
+            
+            try:
+                key = self.stdscr.getch()
+                
+                if key == 27:
+                    curses.curs_set(0)
+                    return None
+                
+                elif key in (10, curses.KEY_ENTER):
+                    curses.curs_set(0)
+                    result = ''.join(user_input)
+                    return result if result else self.default
+                
+                elif key in (curses.KEY_BACKSPACE, 127, 8):
+                    if cursor_pos > 0:
+                        user_input.pop(cursor_pos - 1)
+                        cursor_pos -= 1
+                
+                elif key == curses.KEY_DC:
+                    if cursor_pos < len(user_input):
+                        user_input.pop(cursor_pos)
+                
+                elif key == curses.KEY_LEFT:
+                    cursor_pos = max(0, cursor_pos - 1)
+                
+                elif key == curses.KEY_RIGHT:
+                    cursor_pos = min(len(user_input), cursor_pos + 1)
+                
+                elif key == curses.KEY_HOME:
+                    cursor_pos = 0
+                
+                elif key == curses.KEY_END:
+                    cursor_pos = len(user_input)
+                
+                elif 32 <= key <= 126 and len(user_input) < max_input_len:
+                    user_input.insert(cursor_pos, chr(key))
+                    cursor_pos += 1
+                
+            except KeyboardInterrupt:
+                curses.curs_set(0)
+                return None
+            except Exception:
+                curses.curs_set(0)
+                return None
 
 
 class ConfirmDialog:

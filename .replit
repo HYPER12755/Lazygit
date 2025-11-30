@@ -1,2 +1,28 @@
+modules = ["python-3.11"]
 [agent]
 expertMode = true
+
+[nix]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Git TUI"
+
+[[workflows.workflow]]
+name = "Git TUI"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python3 main.py"
+
+[workflows.workflow.metadata]
+outputType = "console"

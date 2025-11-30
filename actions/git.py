@@ -2,6 +2,7 @@ import subprocess
 import os
 from typing import Tuple, List, Optional
 from utils.ui import ScrollableWindow, InputDialog, ConfirmDialog, show_message
+from menu import Menu
 
 
 def run_git_command(command: List[str], cwd: str = ".") -> Tuple[bool, str, str]:
@@ -157,8 +158,6 @@ class GitActions:
         if not check_git_repo():
             show_message(self.stdscr, "Not a git repository!", "error")
             return
-        
-        from menu import Menu
         
         branch_menu = Menu(self.stdscr, "Branch Management", [
             ("List Branches", self.git_list_branches),
@@ -353,14 +352,146 @@ class GitActions:
             show_message(self.stdscr, "Not a git repository!", "error")
             return
         
+        remote_menu = Menu(self.stdscr, "Remote Management", [
+            ("List Remotes", self.git_list_remotes),
+            ("Add Remote", self.git_add_remote),
+            ("Remove Remote", self.git_remove_remote),
+            ("Set Remote URL", self.git_set_remote_url),
+            ("Show Remote Info", self.git_show_remote),
+            ("Back", None)
+        ])
+        remote_menu.run()
+    
+    def git_list_remotes(self):
         success, stdout, stderr = run_git_command(['git', 'remote', '-v'])
         
         if success:
             if not stdout.strip():
-                show_message(self.stdscr, "No remotes configured.", "info")
+                show_message(self.stdscr, "No remotes configured.\n\nUse 'Add Remote' to add one.", "info")
             else:
                 lines = stdout.split('\n')
                 ScrollableWindow(self.stdscr, lines, "Git Remotes").show()
+        else:
+            show_message(self.stdscr, f"Error:\n{stderr}", "error")
+    
+    def git_add_remote(self):
+        name_dialog = InputDialog(self.stdscr, "Enter remote name (e.g., origin):")
+        remote_name = name_dialog.get_input()
+        
+        if not remote_name:
+            show_message(self.stdscr, "Add remote cancelled.", "info")
+            return
+        
+        url_dialog = InputDialog(self.stdscr, f"Enter URL for remote '{remote_name}':")
+        remote_url = url_dialog.get_input()
+        
+        if not remote_url:
+            show_message(self.stdscr, "Add remote cancelled.", "info")
+            return
+        
+        success, stdout, stderr = run_git_command(['git', 'remote', 'add', remote_name, remote_url])
+        
+        if success:
+            show_message(self.stdscr, f"Remote '{remote_name}' added successfully!\nURL: {remote_url}", "success")
+        else:
+            show_message(self.stdscr, f"Error:\n{stderr}", "error")
+    
+    def git_remove_remote(self):
+        success, stdout, stderr = run_git_command(['git', 'remote'])
+        
+        if not success:
+            show_message(self.stdscr, f"Error:\n{stderr}", "error")
+            return
+        
+        remotes = [r.strip() for r in stdout.split('\n') if r.strip()]
+        
+        if not remotes:
+            show_message(self.stdscr, "No remotes configured!", "warning")
+            return
+        
+        dialog = InputDialog(self.stdscr, f"Available: {', '.join(remotes)}\nEnter remote to remove:")
+        remote_name = dialog.get_input()
+        
+        if not remote_name:
+            show_message(self.stdscr, "Remove cancelled.", "info")
+            return
+        
+        confirm = ConfirmDialog(self.stdscr, f"Remove remote '{remote_name}'?\nThis cannot be undone!")
+        if not confirm.confirm():
+            show_message(self.stdscr, "Remove cancelled.", "info")
+            return
+        
+        success, stdout, stderr = run_git_command(['git', 'remote', 'remove', remote_name])
+        
+        if success:
+            show_message(self.stdscr, f"Remote '{remote_name}' removed successfully!", "success")
+        else:
+            show_message(self.stdscr, f"Error:\n{stderr}", "error")
+    
+    def git_set_remote_url(self):
+        success, stdout, stderr = run_git_command(['git', 'remote'])
+        
+        if not success:
+            show_message(self.stdscr, f"Error:\n{stderr}", "error")
+            return
+        
+        remotes = [r.strip() for r in stdout.split('\n') if r.strip()]
+        
+        if not remotes:
+            show_message(self.stdscr, "No remotes configured!", "warning")
+            return
+        
+        name_dialog = InputDialog(self.stdscr, f"Available: {', '.join(remotes)}\nEnter remote name:")
+        remote_name = name_dialog.get_input()
+        
+        if not remote_name:
+            show_message(self.stdscr, "Set URL cancelled.", "info")
+            return
+        
+        url_dialog = InputDialog(self.stdscr, f"Enter new URL for '{remote_name}':")
+        new_url = url_dialog.get_input()
+        
+        if not new_url:
+            show_message(self.stdscr, "Set URL cancelled.", "info")
+            return
+        
+        confirm = ConfirmDialog(self.stdscr, f"Change URL for remote '{remote_name}'?")
+        if not confirm.confirm():
+            show_message(self.stdscr, "Set URL cancelled.", "info")
+            return
+        
+        success, stdout, stderr = run_git_command(['git', 'remote', 'set-url', remote_name, new_url])
+        
+        if success:
+            show_message(self.stdscr, f"Remote '{remote_name}' URL updated!\nNew URL: {new_url}", "success")
+        else:
+            show_message(self.stdscr, f"Error:\n{stderr}", "error")
+    
+    def git_show_remote(self):
+        success, stdout, stderr = run_git_command(['git', 'remote'])
+        
+        if not success:
+            show_message(self.stdscr, f"Error:\n{stderr}", "error")
+            return
+        
+        remotes = [r.strip() for r in stdout.split('\n') if r.strip()]
+        
+        if not remotes:
+            show_message(self.stdscr, "No remotes configured!", "warning")
+            return
+        
+        dialog = InputDialog(self.stdscr, f"Available: {', '.join(remotes)}\nEnter remote to show:")
+        remote_name = dialog.get_input()
+        
+        if not remote_name:
+            show_message(self.stdscr, "Show cancelled.", "info")
+            return
+        
+        success, stdout, stderr = run_git_command(['git', 'remote', 'show', remote_name])
+        
+        if success:
+            lines = stdout.split('\n')
+            ScrollableWindow(self.stdscr, lines, f"Remote Info: {remote_name}").show()
         else:
             show_message(self.stdscr, f"Error:\n{stderr}", "error")
     
